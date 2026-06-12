@@ -138,7 +138,6 @@ const QUICK_PROMPTS = {
   ]
 };
 
-// Rate limiting helper
 const createRateLimiter = (maxRequests = 5, windowMs = 60000) => {
   let requests = [];
   return {
@@ -158,15 +157,10 @@ const createRateLimiter = (maxRequests = 5, windowMs = 60000) => {
   };
 };
 
-const rateLimiter = createRateLimiter(5, 60000); // 5 requests per minute
+const rateLimiter = createRateLimiter(5, 60000);
 
-// Input sanitization
 const sanitizeInput = (text) => {
-  return text
-    .trim()
-    .slice(0, 5000)
-    .replace(/[<>]/g, '')
-    .replace(/javascript:/gi, '');
+  return text.trim().slice(0, 5000).replace(/[<>]/g, '').replace(/javascript:/gi, '');
 };
 
 export default function DataAnalystAgent() {
@@ -199,7 +193,6 @@ export default function DataAnalystAgent() {
   };
 
   const callAgent = async () => {
-    // Input validation
     if (!input.trim()) {
       setError("Please enter a message");
       return;
@@ -210,7 +203,6 @@ export default function DataAnalystAgent() {
       return;
     }
 
-    // Rate limiting
     if (!rateLimiter.isAllowed()) {
       const remainingTime = rateLimiter.getRemainingTime();
       setRateLimitError(`Too many requests. Please wait ${remainingTime} seconds.`);
@@ -228,12 +220,9 @@ export default function DataAnalystAgent() {
     setError(null);
 
     try {
-      // Call backend API
       const response = await fetch("/api/agent", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           mode: activeMode,
           messages: newHistory,
@@ -243,29 +232,21 @@ export default function DataAnalystAgent() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.message ||
-          `API Error: ${response.status} ${response.statusText}`
-        );
+        throw new Error(errorData.message || `API Error: ${response.status}`);
       }
 
       const data = await response.json();
-      
-      // Validate response structure
       if (!data.content || typeof data.content !== 'string') {
-        throw new Error("Invalid response format from server");
+        throw new Error("Invalid response format");
       }
 
-      const reply = data.content;
-      const assistantMsg = { role: "assistant", content: reply };
-      
+      const assistantMsg = { role: "assistant", content: data.content };
       setHistory([...newHistory, assistantMsg]);
-      setMessages(prev => [...prev, { type: "assistant", text: reply, mode: activeMode }]);
+      setMessages(prev => [...prev, { type: "assistant", text: data.content, mode: activeMode }]);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Something went wrong. Please try again.";
+      const errorMessage = err instanceof Error ? err.message : "Something went wrong";
       setError(errorMessage);
       setMessages(prev => [...prev, { type: "error", text: errorMessage }]);
-      console.error("Agent error:", err);
     } finally {
       setLoading(false);
     }
@@ -286,11 +267,9 @@ export default function DataAnalystAgent() {
   };
 
   const formatText = (text) => {
-    // Sanitize and then format
     const escaped = document.createElement('div');
     escaped.textContent = text;
     const safe = escaped.innerHTML;
-
     return safe
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/^#{1,3}\s+(.+)$/gm, '<div class="msg-heading">$1</div>')
@@ -308,8 +287,6 @@ export default function DataAnalystAgent() {
       display: "flex",
       flexDirection: "column"
     }}>
-
-      {/* Header */}
       <div style={{
         padding: "20px 28px 16px",
         borderBottom: "1px solid #1e1e2e",
@@ -327,30 +304,21 @@ export default function DataAnalystAgent() {
             fontSize: 18
           }}>🤖</div>
           <div>
-            <div style={{ fontSize: 17, fontWeight: 700, letterSpacing: "-0.3px" }}>
-              InsightPilot AI
-            </div>
+            <div style={{ fontSize: 17, fontWeight: 700, letterSpacing: "-0.3px" }}>InsightPilot AI</div>
             <div style={{ fontSize: 12, color: "#64748b" }}>
-              Personal Data Analyst, Dashboard & Strategy Assistant · {mode.label} mode active
+              Personal Data Analyst · {mode.label} mode active
             </div>
           </div>
           {messages.length > 0 && (
-            <button 
-              onClick={clearChat}
-              aria-label="Clear chat history"
-              style={{
-                marginLeft: "auto", padding: "5px 12px",
-                background: "#1e1e2e", border: "1px solid #2d2d40",
-                borderRadius: 7, color: "#94a3b8", fontSize: 12,
-                cursor: "pointer"
-              }}>
-              Clear
-            </button>
+            <button onClick={clearChat} aria-label="Clear chat" style={{
+              marginLeft: "auto", padding: "5px 12px",
+              background: "#1e1e2e", border: "1px solid #2d2d40",
+              borderRadius: 7, color: "#94a3b8", fontSize: 12, cursor: "pointer"
+            }}>Clear</button>
           )}
         </div>
       </div>
 
-      {/* Error Banner */}
       {(error || rateLimitError) && (
         <div style={{
           padding: "12px 28px",
@@ -359,102 +327,69 @@ export default function DataAnalystAgent() {
           color: "#fca5a5",
           fontSize: 13,
           display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center"
+          justifyContent: "space-between"
         }}>
           <span>⚠️ {error || rateLimitError}</span>
-          <button
-            onClick={() => {
-              setError(null);
-              setRateLimitError(null);
-            }}
-            aria-label="Dismiss error"
-            style={{
-              background: "transparent",
-              border: "none",
-              color: "inherit",
-              cursor: "pointer",
-              fontSize: 18
-            }}>
-            ✕
-          </button>
+          <button onClick={() => { setError(null); setRateLimitError(null); }} style={{
+            background: "transparent", border: "none", color: "inherit", cursor: "pointer"
+          }}>✕</button>
         </div>
       )}
 
-      {/* Mode Selector */}
       <div style={{
         display: "flex", gap: 8, padding: "14px 28px",
-        overflowX: "auto", borderBottom: "1px solid #1e1e2e",
-        scrollbarWidth: "none"
+        overflowX: "auto", borderBottom: "1px solid #1e1e2e"
       }}>
         {AGENT_MODES.map(m => (
-          <button
-            key={m.id}
-            onClick={() => handleModeChange(m.id)}
-            aria-label={`Switch to ${m.label} mode`}
-            aria-pressed={activeMode === m.id}
-            style={{
-              display: "flex", alignItems: "center", gap: 7,
-              padding: "8px 16px", borderRadius: 10, whiteSpace: "nowrap",
-              border: activeMode === m.id ? `1px solid ${m.color}88` : "1px solid #2d2d40",
-              background: activeMode === m.id ? `${m.color}18` : "#16161f",
-              color: activeMode === m.id ? m.color : "#94a3b8",
-              fontSize: 13, fontWeight: activeMode === m.id ? 600 : 400,
-              cursor: "pointer", transition: "all 0.15s"
-            }}
-          >
-            <span aria-hidden="true">{m.icon}</span> {m.label}
+          <button key={m.id} onClick={() => handleModeChange(m.id)} style={{
+            display: "flex", alignItems: "center", gap: 7,
+            padding: "8px 16px", borderRadius: 10, whiteSpace: "nowrap",
+            border: activeMode === m.id ? `1px solid ${m.color}88` : "1px solid #2d2d40",
+            background: activeMode === m.id ? `${m.color}18` : "#16161f",
+            color: activeMode === m.id ? m.color : "#94a3b8",
+            fontSize: 13, fontWeight: activeMode === m.id ? 600 : 400,
+            cursor: "pointer"
+          }}>
+            <span>{m.icon}</span> {m.label}
           </button>
         ))}
       </div>
 
-      {/* Main Area */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-
-        {/* Chat or Welcome */}
         <div style={{ flex: 1, overflowY: "auto", padding: "20px 28px" }}>
           {messages.length === 0 ? (
             <div>
-              {/* Mode Card */}
               <div style={{
                 background: "#16161f", border: `1px solid ${mode.color}33`,
                 borderRadius: 14, padding: "20px 22px", marginBottom: 20
               }}>
-                <div style={{ fontSize: 28, marginBottom: 8 }} aria-hidden="true">{mode.icon}</div>
+                <div style={{ fontSize: 28, marginBottom: 8 }}>{mode.icon}</div>
                 <div style={{ fontWeight: 700, fontSize: 16, color: mode.color, marginBottom: 6 }}>
                   {mode.label}
                 </div>
                 <div style={{ fontSize: 14, color: "#94a3b8", lineHeight: 1.6 }}>{mode.desc}</div>
               </div>
-
-              {/* Quick Prompts */}
-              <div style={{ marginBottom: 8 }}>
-                <div style={{ fontSize: 12, color: "#475569", marginBottom: 10, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+              <div>
+                <div style={{ fontSize: 12, color: "#475569", marginBottom: 10, textTransform: "uppercase" }}>
                   Quick Starters
                 </div>
                 <div style={{ display: "grid", gap: 8 }}>
                   {QUICK_PROMPTS[activeMode].map((q, i) => (
-                    <button
-                      key={i}
-                      onClick={() => handleQuickPrompt(q)}
-                      aria-label={`Use quick prompt: ${q}`}
-                      style={{
-                        textAlign: "left", padding: "11px 16px",
-                        background: "#16161f", border: "1px solid #2d2d40",
-                        borderRadius: 10, color: "#cbd5e1", fontSize: 13,
-                        cursor: "pointer", transition: "all 0.15s",
-                        display: "flex", alignItems: "center", gap: 10
-                      }}
-                      onMouseEnter={e => {
-                        e.currentTarget.style.borderColor = mode.color + "66";
-                        e.currentTarget.style.color = "#f1f5f9";
-                      }}
-                      onMouseLeave={e => {
-                        e.currentTarget.style.borderColor = "#2d2d40";
-                        e.currentTarget.style.color = "#cbd5e1";
-                      }}
-                    >
-                      <span style={{ color: mode.color, fontSize: 16 }} aria-hidden="true">→</span> {q}
+                    <button key={i} onClick={() => handleQuickPrompt(q)} style={{
+                      textAlign: "left", padding: "11px 16px",
+                      background: "#16161f", border: "1px solid #2d2d40",
+                      borderRadius: 10, color: "#cbd5e1", fontSize: 13,
+                      cursor: "pointer", display: "flex", alignItems: "center", gap: 10
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.borderColor = mode.color + "66";
+                      e.currentTarget.style.color = "#f1f5f9";
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.borderColor = "#2d2d40";
+                      e.currentTarget.style.color = "#cbd5e1";
+                    }}>
+                      <span style={{ color: mode.color }}>→</span> {q}
                     </button>
                   ))}
                 </div>
@@ -474,8 +409,7 @@ export default function DataAnalystAgent() {
                       border: `1px solid ${msg.type === "error" ? "#ef444440" : mode.color + "40"}`,
                       display: "flex", alignItems: "center", justifyContent: "center",
                       fontSize: 14, marginRight: 10, marginTop: 2
-                    }}
-                    aria-hidden="true">
+                    }}>
                       {msg.type === "error" ? "⚠" : "🤖"}
                     </div>
                   )}
@@ -484,30 +418,24 @@ export default function DataAnalystAgent() {
                     padding: msg.type === "user" ? "10px 16px" : "14px 18px",
                     borderRadius: msg.type === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
                     background: msg.type === "user" ? `${mode.color}22` : "#16161f",
-                    border: msg.type === "user"
-                      ? `1px solid ${mode.color}44`
-                      : msg.type === "error" ? "1px solid #ef444440" : "1px solid #2d2d40",
+                    border: msg.type === "user" ? `1px solid ${mode.color}44` : msg.type === "error" ? "1px solid #ef444440" : "1px solid #2d2d40",
                     fontSize: 14, lineHeight: 1.7, color: "#e2e8f0"
                   }}>
                     {msg.type === "assistant" ? (
-                      <div
-                        dangerouslySetInnerHTML={{ __html: formatText(msg.text) }}
-                      />
+                      <div dangerouslySetInnerHTML={{ __html: formatText(msg.text) }} />
                     ) : (
                       <div style={{ whiteSpace: "pre-wrap" }}>{msg.text}</div>
                     )}
                   </div>
                 </div>
               ))}
-
               {loading && (
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
                   <div style={{
                     width: 30, height: 30, borderRadius: 8,
                     background: `${mode.color}20`, border: `1px solid ${mode.color}40`,
                     display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14
-                  }}
-                  aria-hidden="true">🤖</div>
+                  }}>🤖</div>
                   <div style={{
                     padding: "14px 18px", background: "#16161f",
                     border: "1px solid #2d2d40", borderRadius: "14px 14px 14px 4px"
@@ -529,7 +457,6 @@ export default function DataAnalystAgent() {
           )}
         </div>
 
-        {/* Input Area */}
         <div style={{
           padding: "16px 28px 24px",
           borderTop: "1px solid #1e1e2e",
@@ -538,8 +465,7 @@ export default function DataAnalystAgent() {
           <div style={{
             display: "flex", flexDirection: "column", gap: 0,
             background: "#16161f", border: `1px solid #2d2d40`,
-            borderRadius: 14, overflow: "hidden",
-            transition: "border-color 0.15s"
+            borderRadius: 14, overflow: "hidden"
           }}
             onFocusCapture={e => e.currentTarget.style.borderColor = mode.color + "66"}
             onBlurCapture={e => e.currentTarget.style.borderColor = "#2d2d40"}
@@ -550,7 +476,6 @@ export default function DataAnalystAgent() {
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={mode.placeholder}
-              aria-label="Message input"
               rows={5}
               disabled={loading}
               maxLength={5000}
@@ -558,8 +483,7 @@ export default function DataAnalystAgent() {
                 background: "transparent", border: "none", outline: "none",
                 color: "#e2e8f0", fontSize: 14, padding: "16px 18px",
                 resize: "none", fontFamily: "inherit", lineHeight: 1.6,
-                opacity: loading ? 0.6 : 1,
-                cursor: loading ? "not-allowed" : "auto"
+                opacity: loading ? 0.6 : 1
               }}
             />
             <div style={{
@@ -567,18 +491,16 @@ export default function DataAnalystAgent() {
               padding: "10px 14px", borderTop: "1px solid #1e1e2e"
             }}>
               <div style={{ fontSize: 12, color: "#475569" }}>
-                <span aria-hidden="true">{mode.icon}</span> {mode.label} · Ctrl+Enter to send · {input.length}/5000
+                {mode.icon} {mode.label} · {input.length}/5000
               </div>
               <button
                 onClick={callAgent}
                 disabled={!input.trim() || loading}
-                aria-label="Send message to agent"
                 style={{
                   padding: "8px 20px", borderRadius: 9, border: "none",
                   background: !input.trim() || loading ? "#2d2d40" : mode.color,
                   color: !input.trim() || loading ? "#475569" : "#fff",
-                  fontSize: 13, fontWeight: 600, cursor: !input.trim() || loading ? "not-allowed" : "pointer",
-                  transition: "all 0.15s", letterSpacing: "-0.2px"
+                  fontSize: 13, fontWeight: 600, cursor: !input.trim() || loading ? "not-allowed" : "pointer"
                 }}
               >
                 {loading ? "Analyzing..." : "Run Agent →"}

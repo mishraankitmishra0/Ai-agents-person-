@@ -1,0 +1,20 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "build",
+  "env": {
+    "ANTHROPIC_API_KEY": {
+      "description": "Anthropic API Key for Claude AI access"
+    }
+  },
+  "functions": {
+    "api/agent.js": {
+      "maxDuration": 30
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    }
+  ]
+}
