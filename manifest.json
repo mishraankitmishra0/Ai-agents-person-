@@ -1,0 +1,25 @@
+{
+  "name": "Ai-agents-person-",
+  "version": "1.0.0",
+  "description": "InsightPilot AI - Personal Data Analyst, Dashboard & Strategy Assistant powered by Claude 3.5 Sonnet",
+  "author": "mishraankitmishra0",
+  "license": "MIT",
+  "homepage": "https://insightpilot-ai.vercel.app",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mishraankitmishra0/Ai-agents-person-.git"
+  },
+  "keywords": [
+    "AI",
+    "data-analysis",
+    "dashboard-design",
+    "Claude",
+    "Anthropic",
+    "assistant",
+    "React",
+    "data-scientist"
+  ],
+  "bugs": {
+    "url": "https://github.com/mishraankitmishra0/Ai-agents-person-/issues"
+  }
+}
